@@ -26,7 +26,7 @@
 #
 
 
-# If a generation passes this limit, no new cells are created.
+# If a generation passes this number of cells, no new cells are created.
 cells_limit = 50
 
 
@@ -163,7 +163,7 @@ module.exports.Cell = class Cell
 
     # stress values, used to animate
     @stress_angle = .0
-    @stress_ratio = 1.       # multiplies width, divides height
+    @stress_ratio = 1       # multiplies width, divides height
     @stress_angle_time = .0
     @stress_ratio_time = .0
 
@@ -212,7 +212,7 @@ module.exports.Cell = class Cell
         self.expression[symbol] += 1
 
         # stop symbol will interrupt transcription
-        if b is ' ': break
+        if b is ' ' then break
 
     return
 
@@ -364,32 +364,32 @@ module.exports.Body = class Body
     constructor: (@genome) ->
 
       # start body with strongest target sequence
-      best = max( (genome.count(s), s) for s in Cell.start_sequences.values() )[1]
-
-
-
+      best = ''
+      best_count = 0
+      for hi, seq of start_sequences_by_morphogen_hierarchy
+        count = @genome.match(new RegExp seq, 'g').length
+        if count > best_count then [best, best_count] = [seq, count]
 
 
       # generate body
-      self.root = Cell(self, best)
+      @cells = []
+      @root = new Cell this, best
       new_cells = 1
-      last_generation = self.root.generation
-      while new_cells > 0 and len(self) < self.cells_limit:
-          new_cells = 0
-          for cell in self:
-              if cell.generation == last_generation:
-                  new_cells += cell.gem()
-          last_generation += 1
+      last_generation = @root.generation
+      while new_cells > 0 and @cells.length < cells_limit
+        new_cells = 0
+        for cell in self when cell.generation is last_generation
+          new_cells += cell.gem()
+        last_generation += 1
 
       # clean up
-      for cell in self:
-          for s in cell.children:
-              if not isinstance(cell.children[s], Cell):
-                  cell.children[s] = None
+      for cell in @cells
+        for stem, child of cell.children when typeof child is 'string'
+          delete cell.children[stem]
 
       # shape body
-      self.scale = None
-      self.update_coordinates()
+      @scale = null
+#      @update_coordinates()
 
 
 
