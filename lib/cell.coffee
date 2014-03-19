@@ -274,57 +274,53 @@ module.exports.Cell = class Cell
       return cnt
 
 
-#    def recursive_set_coordinates(self, x=.0, y=.0, stem_angle=.0):
-#        """ """
-#        # update width and height
-#        self.width = self.relax_width * self.stress_ratio
-#        self.height = self.relax_height / self.stress_ratio
-#
-#        # resulting angle depends on all previous angles
-#        self.angle = math.fmod(stem_angle + self.relax_angle + self.stress_angle, 360)
-#
-#        # the cell is attached by its bottom side
-#        # thus the center is displaced by the cell's height
-#        self.cx = x + deg_sin(self.angle) * self.height/2
-#        self.cy = y + deg_cos(self.angle) * self.height/2
-#
-#
-#        # update children
-#        for s in self.stem_symbols:
-#            child = self.children[s]
-#            if child:
-#                wf, hf, a = self.stem_coordinates[s]
-#
-#                # calculate stem angle
-#                sa = self.angle + a
-#
-#                # calculate stem position
-#                l = wf*self.width + hf*self.height
-#                sx = self.cx + l*deg_sin(sa)
-#                sy = self.cy + l*deg_cos(sa)
-#
-#                # update child
-#                child.recursive_set_coordinates(sx, sy, sa)
-#
-#
-#
-#    def animate(self):
-#        """ """
-#        if not self.parent:
-#            return
-#
-#        # stress angle
-#        self.stress_angle_time = (self.stress_angle_time + 10*self.expression['s']) % 360
-#        self.stress_angle = deg_sin(self.stress_angle_time) * 10*self.expression['n']
-#
-#        # stress ratio
-#        self.stress_ratio_time = (self.stress_ratio_time + 10*self.expression['e']) % 360
-#        self.stress_ratio = 1.3 ** deg_sin(self.stress_ratio_time)
-#
-#
-#
-#
-#
+    #
+    # Geometry
+    #
+    recursive_set_coordinates: (x = .0, y = .0, stem_angle = .0) ->
+      # update width and height
+      @width = @relax_width * @stress_ratio
+      @height = @relax_height / @stress_ratio
+
+      # resulting angle depends on all previous angles
+      @angle = (stem_angle + @relax_angle + @stress_angle) % 360
+
+      # the cell is attached by its bottom side
+      # thus the center is displaced by the cell's height
+      @cx = x + deg_sin(@angle) * @height / 2
+      @cy = y + deg_cos(@angle) * @height / 2
+
+
+      # update children
+      for symbol, child of @children
+        [wf, hf, a] = stem_coordinates[symbol]
+
+        # calculate stem angle
+        sa = @angle + a
+
+        # calculate stem position
+        l = wf * @width + hf * @height
+        sx = @cx + l * deg_sin sa
+        sy = @cy + l * deg_cos sa
+
+        # update child
+        child.recursive_set_coordinates sx, sy, sa
+
+      return
+
+
+    animate: ->
+      if !@parent then return
+
+      # stress angle
+      @stress_angle_time = (@stress_angle_time + 10*@expression['s']) % 360
+      @stress_angle = deg_sin(@stress_angle_time) * 10*@expression['n']
+
+      # stress ratio
+      @stress_ratio_time = (@stress_ratio_time + 10*@expression['e']) % 360
+      @stress_ratio = 1.3 ** deg_sin @stress_ratio_time
+
+
 #    def draw(self):
 #        """ """
 #        # isolate matrix operations
@@ -389,32 +385,20 @@ module.exports.Body = class Body
 
       # shape body
       @scale = null
-#      @update_coordinates()
+      @update_coordinates()
+
+
+    # recalculates cell tree geometry
+    update_coordinates: ->
+      @root.recursive_set_coordinates()
+
+
+    update: ->
+      c.animate() for c in @cells
+      @update_coordinates()
 
 
 
-#    # recalculates cell tree geometry
-#    def update_coordinates(self):
-#        """ """
-#        self.root.recursive_set_coordinates()
-#
-#
-#
-#
-#
-#
-#    def update(self):
-#        """
-#        Executes a whole time iteration.
-#
-#        """
-#        for c in self:
-#            c.animate()
-#
-#        self.update_coordinates()
-#
-#
-#
 #    def draw(self):
 #        """ """
 #        x = [c.cx for c in self]
