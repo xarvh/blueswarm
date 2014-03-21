@@ -1,0 +1,18 @@
+{
+  "name": "blueswarm",
+  "description": "A genetic video game",
+  "version": "0.0.0",
+  "author": "Francesco Orsenigo",
+  "main": "app/server.coffee",
+  "license": "GPLv3",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xarvh/blueswarm"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "coffee": "coffee -cwo public/ src/*.coffee",
+    "test": "jshint lib/*.js"
+  }
+}
