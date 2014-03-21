@@ -25,6 +25,9 @@
 #   from any point where the start sequence appears to the first stop symbol.
 #
 
+#TODO: don't mess with natives...
+Object.values ?= (obj) -> (v for k, v of obj)
+
 
 # If a generation passes this number of cells, no new cells are created.
 cells_limit = 50
@@ -73,39 +76,16 @@ code_promoters =
 
 
 # List of all the valid symbols that can appear in a genetic code.
-exports.code_symbols = code_symbols = [].concat(
+module.exports.code_symbols = code_symbols = [].concat(
   code_morphogens,
   stem_symbols,
   Object.values(code_promoters)
 ).sort()
 
 
-# According to the hierarchy of their abundance, morphogens
-# will activate different start sequences of the genome:
-# each possible morphogen hierarchy permutation indicates an
-# arbitrary start sequence from which to start transcription.
-#
-# There should be roughly as many unique target sequences
-# as hierarchy permutations.
-#
-# With about 10 different base symbols, there are about 100
-# couples of bases from which to choose from.
-# This also means that a genome of about 1000 bases will contain
-# many of these bases several times.
-start_sequences_by_morphogen_hierarchy = make_start_sequences_by_morphogen_hierarchy code_symbols, morphogens
-
-
 #
 # HELPERS
 #
-Object.values ?= (obj) -> (v for k, v of obj)
-
-
-# OpenGL deals in degrees, and so do we
-#deg_sin = (angle) -> Math.sin angle * Math.PI / 180
-#deg_cos = (angle) -> Math.cos angle * Math.PI / 180
-
-
 permutations = (items) ->
 
   items = items[..]
@@ -145,17 +125,30 @@ make_start_sequences_by_morphogen_hierarchy = (code_symbols, morphogens) ->
   return sequence_by_hierarchy
 
 
+# According to the hierarchy of their abundance, morphogens
+# will activate different start sequences of the genome:
+# each possible morphogen hierarchy permutation indicates an
+# arbitrary start sequence from which to start transcription.
+#
+# There should be roughly as many unique target sequences
+# as hierarchy permutations.
+#
+# With about 10 different base symbols, there are about 100
+# couples of bases from which to choose from.
+# This also means that a genome of about 1000 bases will contain
+# many of these bases several times.
+start_sequences_by_morphogen_hierarchy = make_start_sequences_by_morphogen_hierarchy code_symbols, morphogens
 
+
+#
+# CELL
+#
 module.exports.Cell = class Cell
   @description: 'The basic building block of a body.'
 
 
-  # this instead is used for drawing
-#  square = ((-.5, -.5), (+.5, -.5), (+.5, +.5), (-.5, +.5))
-
-
   constructor: (@body, @start_sequence, @parent) ->
-#    body.append(self)
+    body.cells.push this
     @generation = if parent then @parent.generation + 1 else 0
 
     # body structure
