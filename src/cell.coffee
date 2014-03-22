@@ -38,7 +38,7 @@ CELLS_LIMIT = 50
 
 # Constants to scale how much a symbol expression translates
 # into a cell's features
-TURN_FACTOR = 5
+TURN_FACTOR = 0.09
 WIDTH_FACTOR = 1.1
 HEIGHT_FACTOR = 1.1
 GEM_THRESHOLD = 7
@@ -48,9 +48,9 @@ GENERATION_FACTOR = .5
 # This defines where on a cell children can gem.
 STEM_COORDINATES =
   # width coefficient, height coefficient, angle
-  '<': [ +.5, .0, -90]  # left
-  '^': [  .0, .5,   0]  # top
-  '>': [ +.5, .0, +90]  # right
+  '<': [ +.5, .0, -PI/2]  # left
+  '^': [  .0, .5,     0]  # top
+  '>': [ +.5, .0, +PI/2]  # right
 
 
 # Each different stem promoter symbol will redirect all subsequent
@@ -273,7 +273,7 @@ module.exports.Cell = class Cell
   #
   # Geometry
   #
-  recursive_set_coordinates: (x = .0, y = .0, stem_angle = .0) ->
+  recursive_set_coordinates: (x = 0, y = 0, stem_angle = 0) ->
     # update width and height
     @width = @relax_width * @stress_ratio
     @height = @relax_height / @stress_ratio
@@ -354,12 +354,4 @@ module.exports.Body = class Body
   animate: (deltaTime) ->
     c.animate deltaTime for c in @cells
     @root.recursive_set_coordinates()
-
-
-#if __name__ == '__main__':
-#    print 'morphogens: ', Cell.morphogens
-#    print 'promoters:', Cell.CODE_PROMOTERS.values()
-#    print 'stems:', Cell.STEM_SYMBOLS
-#
-#EOF
 

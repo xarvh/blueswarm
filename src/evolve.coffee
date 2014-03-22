@@ -16,9 +16,9 @@ module.exports.Evolution = class Evolution
     (randomChoice symbols for [1..length]).join ''
 
 
-  @createRandomPop = (genome_symbols, genome_length, pop_size = 100) ->
+  @makeRandomPopulation = (genome_symbols, genome_length = 1000, pop_size = 100) ->
     pop = {}
-    pop[Evolution.makeRandomGenome genome_symbols, genome_length] = 0 for [1..pop_size]
+    pop[Evolution.makeRandomGenome genome_symbols, genome_length] = 1 for [1..pop_size]
     return pop
 
 
@@ -33,7 +33,7 @@ module.exports.Evolution = class Evolution
       r -= fitness
       if r <= 0 then return genome
 
-    throw ''
+    return randomChoice Object.keys population
 
 
   @newGenomeFromPopulation = (population, genome_symbols, break_symbol, mutationChance = 0.01) ->
@@ -41,7 +41,7 @@ module.exports.Evolution = class Evolution
     # Recombine from two parents:
     son = []
     for [1..2]
-      blocks = Evolution.pick_fit_parent(population).split break_symbol
+      blocks = Evolution.pickFitParent(population).split break_symbol
       son.push randomChoice blocks for [1..(Math.max 1, blocks.length / 2)]
 
     genome = son.join break_symbol
@@ -89,7 +89,7 @@ module.exports.Evolution = class Evolution
 
       # ...and move them to a new population
       delete population[genome]
-      newPopulation[genome] = 0
+      newPopulation[genome] = 1
 
     return newPopulation
 
