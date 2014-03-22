@@ -28,22 +28,25 @@
 #TODO: don't mess with natives...
 Object.values ?= (obj) -> (v for k, v of obj)
 
+{PI, sin, cos} = Math
+ROUND_ANGLE = PI * 2
+
 
 # If a generation passes this number of cells, no new cells are created.
-cells_limit = 50
+CELLS_LIMIT = 50
 
 
 # Constants to scale how much a symbol expression translates
 # into a cell's features
-turn_factor = 5
-width_factor = 1.1
-height_factor = 1.1
-gem_threshold = 7
-generation_factor = .5
+TURN_FACTOR = 5
+WIDTH_FACTOR = 1.1
+HEIGHT_FACTOR = 1.1
+GEM_THRESHOLD = 7
+GENERATION_FACTOR = .5
 
 
 # This defines where on a cell children can gem.
-stem_coordinates =
+STEM_COORDINATES =
   # width coefficient, height coefficient, angle
   '<': [ +.5, .0, -90]  # left
   '^': [  .0, .5,   0]  # top
@@ -52,7 +55,7 @@ stem_coordinates =
 
 # Each different stem promoter symbol will redirect all subsequent
 # code expressions towards the corresponding stem.
-stem_symbols = Object.keys stem_coordinates
+STEM_SYMBOLS = Object.keys STEM_COORDINATES
 
 
 # 'morphogens' are a combination of stimuli that determine what gene
@@ -62,12 +65,12 @@ stem_symbols = Object.keys stem_coordinates
 # will be activated for the development of a cell.
 # The 'generation' morphogen depends on a cell's generation, while
 # 'code' morphogens are expressed by genetic code
-generation_morphogen = 'g'
-code_morphogens = ['n', 's', 'e', 'w']
-morphogens = code_morphogens.concat [generation_morphogen]
+GENERATION_MORPHOGEN = 'g'
+CODE_MORPHOGENS = ['n', 's', 'e', 'w']
+MORPHOGENS = CODE_MORPHOGENS.concat [GENERATION_MORPHOGEN]
 
 
-code_promoters =
+CODE_PROMOTERS =
   stop: ' '
   left: 'l'
   right: 'r'
@@ -76,10 +79,10 @@ code_promoters =
 
 
 # List of all the valid symbols that can appear in a genetic code.
-module.exports.code_symbols = code_symbols = [].concat(
-  code_morphogens,
-  stem_symbols,
-  Object.values(code_promoters)
+module.exports.CODE_SYMBOLS = CODE_SYMBOLS = [].concat(
+  CODE_MORPHOGENS,
+  STEM_SYMBOLS,
+  Object.values(CODE_PROMOTERS)
 ).sort()
 
 
@@ -106,18 +109,18 @@ permutations = (items) ->
   return permutedItems
 
 
-make_start_sequences_by_morphogen_hierarchy = (code_symbols, morphogens) ->
+make_start_sequences_by_morphogen_hierarchy = ->
 
   # Start sequences are all possible combinations of code symbols, two symbols each:
   start_sequences = []
-  for i in code_symbols
-    for j in code_symbols
+  for i in CODE_SYMBOLS
+    for j in CODE_SYMBOLS
       start_sequences.push [i, j].join ''
 
   # Relative morphogen quantity determines a morphogen hierarchy (from most to less abundant)
   # Each possible hierarchy will in turn activate different start sequences of the genome.
   sequence_by_hierarchy = {}
-  for morphogens_hierarchy, index in permutations morphogens
+  for morphogens_hierarchy, index in permutations MORPHOGENS
     # Depending on the number of symbols and morphogens, possible hierarchies may be more than
     # possible bases, which means that different hierarchies may activate the same start sequences
     sequence_by_hierarchy[morphogens_hierarchy.join ''] = start_sequences[index % start_sequences.length]
@@ -137,7 +140,7 @@ make_start_sequences_by_morphogen_hierarchy = (code_symbols, morphogens) ->
 # couples of bases from which to choose from.
 # This also means that a genome of about 1000 bases will contain
 # many of these bases several times.
-start_sequences_by_morphogen_hierarchy = make_start_sequences_by_morphogen_hierarchy code_symbols, morphogens
+start_sequences_by_morphogen_hierarchy = make_start_sequences_by_morphogen_hierarchy()
 
 
 #
@@ -148,17 +151,17 @@ module.exports.Cell = class Cell
 
 
   constructor: (@body, @start_sequence, @parent) ->
-    body.cells.push this
-    @generation = if parent then @parent.generation + 1 else 0
+    @body.cells.push this
+    @generation = if @parent then @parent.generation + 1 else 0
 
     # body structure
     @children = {}
 
     # stress values, used to animate
-    @stress_angle = .0
+    @stress_angle = 0
     @stress_ratio = 1       # multiplies width, divides height
-    @stress_angle_time = .0
-    @stress_ratio_time = .0
+    @stress_angle_time = 0
+    @stress_ratio_time = 0
 
     # morphogenesis steps
     @express_genome @start_sequence
@@ -166,7 +169,7 @@ module.exports.Cell = class Cell
     @express_to_stems()
 
     # the normalized expression values are used to determine aesthetic properties
-    n = Math.max Object.values(@expression.values)...
+    n = Math.max Object.values(@expression)...
     if n then @expression[k] /= n for k of @expression
 
 
@@ -176,14 +179,14 @@ module.exports.Cell = class Cell
   express_genome: (start_sequence) ->
 
     @expression = {}
-    @expression[symbol] = 0 for symbol in code_symbols
+    @expression[symbol] = 0 for symbol in CODE_SYMBOLS
 
-    ##@@ this dictionary generation seems to be especially slow, should be cached
-    #self.stem_expression_cached.deepcopy()
+    # TODO: this dictionary generation seems to be especially slow, should be cached
+    # @stem_expression_cached.deepcopy()
     @stem_expression = {}
-    for stem in stem_symbols
+    for stem in STEM_SYMBOLS
       @stem_expression[stem] = {}
-      for morphogen in code_morphogens
+      for morphogen in CODE_MORPHOGENS
         @stem_expression[stem][morphogen] = 0
 
     # Find targets and express all bases sequentially,
@@ -194,18 +197,18 @@ module.exports.Cell = class Cell
       for symbol in sequence
 
         # stem symbols change the stem to which all subsequent morphogens are applied
-        if symbol in stem_symbols
+        if symbol in STEM_SYMBOLS
           target_stem = symbol
 
         # morphogen symbols will increase morphogen amount in targeted stem
-        else if symbol in code_morphogens
+        else if symbol in CODE_MORPHOGENS
           @stem_expression[target_stem][symbol] += 1
 
         # count symbols occourrences
-        self.expression[symbol] += 1
+        @expression[symbol] += 1
 
         # stop symbol will interrupt transcription
-        if b is ' ' then break
+        if symbol is ' ' then break
 
     return
 
@@ -217,27 +220,27 @@ module.exports.Cell = class Cell
     ex = @expression
 
     # turn
-    @relax_angle = (ex['r'] - ex['l']) * @turn_factor
+    @relax_angle = (ex['r'] - ex['l']) * TURN_FACTOR
 
     # resize
-    @relax_width = @width_factor ** ex['-']
-    @relax_height = @height_factor ** ex['|']
+    @relax_width = WIDTH_FACTOR ** ex['-']
+    @relax_height = HEIGHT_FACTOR ** ex['|']
 
 
   #
   # Produces new cells buds on stems
   #
   express_to_stems: ->
-    for stem in stem_symbols
+    for stem in STEM_SYMBOLS
 
       sum = 0
       sum += v for k, v of @stem_expression[stem]
 
-      if sum < gem_threshold * 1.02 ** self.generation then break
+      if sum < GEM_THRESHOLD * 1.02 ** @generation then break
 
       # add generation morphogen
-      # it is added only now not to interfere with the gem_threshold calculation
-      @stem_expression[stem][generation_morphogen] = @generation * generation_factor
+      # it is added only now not to interfere with the GEM_THRESHOLD calculation
+      @stem_expression[stem][GENERATION_MORPHOGEN] = @generation * GENERATION_FACTOR
 
       # find hierarchy of morphogens strengths
       hierarchy = ({k, v} for k, v of @stem_expression[stem])
@@ -254,95 +257,63 @@ module.exports.Cell = class Cell
     return
 
 
-    #
-    # Create a new cell at a stem point.
-    #
-    gem: ->
-      cnt = 0
+  #
+  # Create a new cell at a stem point.
+  #
+  gem: ->
+    cnt = 0
 
-      for stem in stem_symbols when start_sequence = @children[stem]
-        @children[stem] = new Cell @body, start_sequence, this
-        cnt += 1
+    for stem in STEM_SYMBOLS when start_sequence = @children[stem]
+      @children[stem] = new Cell @body, start_sequence, this
+      cnt += 1
 
-      return cnt
-
-
-    #
-    # Geometry
-    #
-    recursive_set_coordinates: (x = .0, y = .0, stem_angle = .0) ->
-      # update width and height
-      @width = @relax_width * @stress_ratio
-      @height = @relax_height / @stress_ratio
-
-      # resulting angle depends on all previous angles
-      @angle = (stem_angle + @relax_angle + @stress_angle) % 360
-
-      # the cell is attached by its bottom side
-      # thus the center is displaced by the cell's height
-      @cx = x + deg_sin(@angle) * @height / 2
-      @cy = y + deg_cos(@angle) * @height / 2
+    return cnt
 
 
-      # update children
-      for symbol, child of @children
-        [wf, hf, a] = stem_coordinates[symbol]
+  #
+  # Geometry
+  #
+  recursive_set_coordinates: (x = .0, y = .0, stem_angle = .0) ->
+    # update width and height
+    @width = @relax_width * @stress_ratio
+    @height = @relax_height / @stress_ratio
 
-        # calculate stem angle
-        sa = @angle + a
+    # resulting angle depends on all previous angles
+    @angle = (stem_angle + @relax_angle + @stress_angle) % ROUND_ANGLE
 
-        # calculate stem position
-        l = wf * @width + hf * @height
-        sx = @cx + l * deg_sin sa
-        sy = @cy + l * deg_cos sa
+    # the cell is attached by its bottom side
+    # thus the center is displaced by the cell's height
+    @cx = x + sin(@angle) * @height / 2
+    @cy = y + cos(@angle) * @height / 2
 
-        # update child
-        child.recursive_set_coordinates sx, sy, sa
+    # update children
+    for symbol, child of @children
+      [wf, hf, a] = STEM_COORDINATES[symbol]
 
-      return
+      # calculate stem angle
+      sa = @angle + a
 
+      # calculate stem position
+      l = wf * @width + hf * @height
+      sx = @cx + l * sin sa
+      sy = @cy + l * cos sa
 
-    animate: ->
-      if !@parent then return
+      # update child
+      child.recursive_set_coordinates sx, sy, sa
 
-      # stress angle
-      @stress_angle_time = (@stress_angle_time + 10*@expression['s']) % 360
-      @stress_angle = deg_sin(@stress_angle_time) * 10*@expression['n']
-
-      # stress ratio
-      @stress_ratio_time = (@stress_ratio_time + 10*@expression['e']) % 360
-      @stress_ratio = 1.3 ** deg_sin @stress_ratio_time
-
-
-#    def draw(self):
-#        """ """
-#        # isolate matrix operations
-#        glPushMatrix()
-#
-#        glTranslated(self.cx, self.cy, 0)
-#        glRotated(self.angle, 0, 0, -1)
-#        glScaled(self.width, self.height, 1)
-#
-#        # solid cell body
-#        e = self.expression
-#        glColor4f(e[' ']/3, e['|']/2, .5+e['^']/2, .8)
-#        glEnable(GL_BLEND)
-#        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-#        glBegin(GL_QUADS)
-#        for v in self.square:
-#            glVertex2f(*v)
-#        glEnd()
-#
-#        # contour
-#        glBegin(GL_LINE_LOOP)
-#        glColor4f(0, 0, 1, .9)
-#        for v in self.square:
-#            glVertex2f(*v)
-#        glEnd()
-#
-#        glPopMatrix()
+    return
 
 
+  animate: ->
+    if !@parent then return
+
+    # stress angle
+    @stress_angle_time = (@stress_angle_time + 0.17*@expression['s']) % ROUND_ANGLE
+    @stress_angle = sin(@stress_angle_time) * 0.17*@expression['n']
+
+    # stress ratio
+    @stress_ratio_time = (@stress_ratio_time + 0.17*@expression['e']) % ROUND_ANGLE
+    @stress_ratio = 1.3 ** sin @stress_ratio_time
 
 
 #
@@ -350,74 +321,50 @@ module.exports.Cell = class Cell
 #
 module.exports.Body = class Body
 
-    constructor: (@genome) ->
+  constructor: (@genome) ->
 
-      # start body with strongest target sequence
-      best = ''
-      best_count = 0
-      for hi, seq of start_sequences_by_morphogen_hierarchy
-        count = @genome.match(new RegExp seq, 'g').length
-        if count > best_count then [best, best_count] = [seq, count]
-
-
-      # generate body
-      @cells = []
-      @root = new Cell this, best
-      new_cells = 1
-      last_generation = @root.generation
-      while new_cells > 0 and @cells.length < cells_limit
-        new_cells = 0
-        for cell in self when cell.generation is last_generation
-          new_cells += cell.gem()
-        last_generation += 1
-
-      # clean up
-      for cell in @cells
-        for stem, child of cell.children when typeof child is 'string'
-          delete cell.children[stem]
-
-      # shape body
-      @scale = null
-      @update_coordinates()
+    # start body with strongest target sequence
+    best = ''
+    best_count = 0
+    for hi, seq of start_sequences_by_morphogen_hierarchy
+      count = @genome.match(new RegExp seq, 'g')?.length
+      if count > best_count then [best, best_count] = [seq, count]
 
 
-    # recalculates cell tree geometry
-    update_coordinates: ->
-      @root.recursive_set_coordinates()
+    # generate body
+    @cells = []
+    @root = new Cell this, best
+    new_cells = 1
+    last_generation = @root.generation
+    while new_cells > 0 and @cells.length < CELLS_LIMIT
+      new_cells = 0
+      for cell in @cells when cell.generation is last_generation
+        new_cells += cell.gem()
+      last_generation += 1
+
+    # clean up
+    for cell in @cells
+      for stem, child of cell.children when typeof child is 'string'
+        delete cell.children[stem]
+
+    # shape body
+    @scale = null
 
 
-    update: ->
-      c.animate() for c in @cells
-      @update_coordinates()
+  # recalculates cell tree geometry
+  update_coordinates: ->
+    @root.recursive_set_coordinates()
 
 
+  update: ->
+    c.animate() for c in @cells
+    @update_coordinates()
 
-#    def draw(self):
-#        """ """
-#        x = [c.cx for c in self]
-#        y = [c.cy for c in self]
-#        ox = (max(x)+min(x)) /2
-#        oy = (max(y)+min(y)) /2
-#
-#        if not self.scale:
-#            w = max(x)-min(x)
-#            h = max(y)-min(y)
-#            self.scale = 2./max(w, h, self.root.width)
-#
-#        glPushMatrix()
-#        glScaled(self.scale, self.scale, 1)
-#        glTranslated(-ox, -oy, 0)
-#        for c in self:
-#            c.draw()
-#        glPopMatrix()
-#
-#
-#
-#
+
 #if __name__ == '__main__':
 #    print 'morphogens: ', Cell.morphogens
-#    print 'promoters:', Cell.code_promoters.values()
-#    print 'stems:', Cell.stem_symbols
+#    print 'promoters:', Cell.CODE_PROMOTERS.values()
+#    print 'stems:', Cell.STEM_SYMBOLS
 #
 #EOF
 
