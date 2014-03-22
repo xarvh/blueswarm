@@ -283,8 +283,8 @@ module.exports.Cell = class Cell
 
     # the cell is attached by its bottom side
     # thus the center is displaced by the cell's height
-    @cx = x + sin(@angle) * @height / 2
-    @cy = y + cos(@angle) * @height / 2
+    @cx = x + .5 * @height * cos @angle
+    @cy = y + .5 * @height * sin @angle
 
     # update children
     for symbol, child of @children
@@ -295,8 +295,8 @@ module.exports.Cell = class Cell
 
       # calculate stem position
       l = wf * @width + hf * @height
-      sx = @cx + l * sin sa
-      sy = @cy + l * cos sa
+      sx = @cx + l * cos sa
+      sy = @cy + l * sin sa
 
       # update child
       child.recursive_set_coordinates sx, sy, sa

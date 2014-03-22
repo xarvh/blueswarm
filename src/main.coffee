@@ -7,22 +7,17 @@ rect = (x, y, w, h) -> ctx.fillRect x-w/2, y-h/2, w, h
 #
 drawCell = (cell) ->
 
-  # isolate matrix operations
+  # Isolate matrix operations
   ctx.save()
-
-  ctx.translate -cell.cy, -cell.cx
-  #????????????????
-#  ctx.translate cell.cx, cell.cy
+  ctx.translate cell.cx, cell.cy
   ctx.rotate cell.angle
   ctx.scale cell.height, cell.width
 
-  # solid cell body
+  # Solid cell body
   e = cell.expression
   color = "rgba(#{Math.floor 85 * e[' ']}, #{Math.floor 128 * e['|']}, #{Math.floor 128 + 128 * e['^']/2}, .8)"
   ctx.fillStyle = color
   rect 0, 0, 1, 1
-
-  # TODO: contour
 
   ctx.restore()
 
@@ -32,15 +27,15 @@ drawCell = (cell) ->
 #
 drawBody = (body) ->
   {min, max} = Math
-  x = (c.cx for c in body.cells)
-  y = (c.cy for c in body.cells)
+  x = body.cells.map (c) -> c.cx
+  y = body.cells.map (c) -> c.cy
   ox = (max(x...)+min(x...)) /2
   oy = (max(y...)+min(y...)) /2
 
   if !body.scale
     w = max(x...)-min(x...)
     h = max(y...)-min(y...)
-    body.scale = 0.5 / max(w, h, body.root.width)
+    body.scale = 0.5 / max w, h, body.root.width
 
   ctx.save()
   ctx.scale body.scale, body.scale
@@ -119,8 +114,9 @@ fitness_surface = (genome) ->
     return f
 
 
-
-
+#
+#
+#
 window.onload = ->
 
   {CODE_SYMBOLS} = cell
