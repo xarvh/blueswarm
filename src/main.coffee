@@ -51,7 +51,11 @@ drawBody = (body) ->
 #
 #
 #
-draw = ->
+animate = ->
+  window.requestAnimationFrame animate
+
+  body.animate 0.03
+
   ctx = document.getElementById('glcanvas').getContext('2d')
   window.ctx = ctx
 
@@ -78,7 +82,6 @@ window.onload = ->
     return (s[Math.floor Math.random() * s.length] for [1..1000]).join ''
 
   window.body = body = new cell.Body makeGenome()
-  body.update()
 
-  draw()
+  animate()
 

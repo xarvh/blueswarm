@@ -304,15 +304,15 @@ module.exports.Cell = class Cell
     return
 
 
-  animate: ->
+  animate: (deltaTime) ->
     if !@parent then return
 
     # stress angle
-    @stress_angle_time = (@stress_angle_time + 0.17*@expression['s']) % ROUND_ANGLE
-    @stress_angle = sin(@stress_angle_time) * 0.17*@expression['n']
+    @stress_angle_time = (@stress_angle_time + deltaTime*@expression['s']) % ROUND_ANGLE
+    @stress_angle = 0.17 * sin(@stress_angle_time) * @expression['n']
 
     # stress ratio
-    @stress_ratio_time = (@stress_ratio_time + 0.17*@expression['e']) % ROUND_ANGLE
+    @stress_ratio_time = (@stress_ratio_time + deltaTime*@expression['e']) % ROUND_ANGLE
     @stress_ratio = 1.3 ** sin @stress_ratio_time
 
 
@@ -351,14 +351,9 @@ module.exports.Body = class Body
     @scale = null
 
 
-  # recalculates cell tree geometry
-  update_coordinates: ->
+  animate: (deltaTime) ->
+    c.animate deltaTime for c in @cells
     @root.recursive_set_coordinates()
-
-
-  update: ->
-    c.animate() for c in @cells
-    @update_coordinates()
 
 
 #if __name__ == '__main__':
